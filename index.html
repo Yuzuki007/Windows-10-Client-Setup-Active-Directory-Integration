@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Windows 10 Client & AD Integration — Home Lab</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --bg2: #0f1528;
+      --panel: #111827;
+      --border: #1e2d4a;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --accent3: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --mono: 'Share Tech Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 0 8vw;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -200px;
+      right: -200px;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tag {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero-tag::before {
+      content: '';
+      display: inline-block;
+      width: 30px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.6s ease 0.1s both;
+    }
+
+    .hero h1 span {
+      color: var(--accent);
+      display: block;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s ease 0.2s both;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      animation: fadeUp 0.6s ease 0.3s both;
+    }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 5px 14px;
+      border-radius: 3px;
+      border: 1px solid;
+      letter-spacing: 1px;
+    }
+
+    .badge-blue { color: var(--accent); border-color: var(--accent); background: rgba(0,212,255,0.07); }
+    .badge-green { color: var(--accent3); border-color: var(--accent3); background: rgba(16,185,129,0.07); }
+    .badge-purple { color: #a78bfa; border-color: #7c3aed; background: rgba(124,58,237,0.07); }
+    .badge-amber { color: var(--warn); border-color: var(--warn); background: rgba(245,158,11,0.07); }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 8vw;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: fadeUp 0.6s ease 0.5s both;
+    }
+
+    .scroll-hint::after {
+      content: '';
+      width: 40px;
+      height: 1px;
+      background: var(--muted);
+      animation: scrollLine 2s ease infinite;
+    }
+
+    /* Section */
+    section {
+      position: relative;
+      z-index: 1;
+      padding: 6rem 8vw;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-label::before {
+      content: '';
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 3rem;
+    }
+
+    /* Objectives checklist */
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .check-item {
+      background: var(--panel);
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: background 0.2s;
+    }
+
+    .check-item:hover { background: var(--bg2); }
+
+    .check-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(16,185,129,0.15);
+      border: 1px solid var(--accent3);
+      color: var(--accent3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .check-text {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    /* Environment table */
+    .env-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .env-table tr { border-bottom: 1px solid var(--border); }
+    .env-table tr:last-child { border-bottom: none; }
+
+    .env-table td {
+      padding: 14px 20px;
+      background: var(--panel);
+    }
+
+    .env-table td:first-child {
+      color: var(--muted);
+      width: 220px;
+      border-right: 1px solid var(--border);
+    }
+
+    .env-table td:last-child { color: var(--accent); }
+
+    .table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    /* Steps */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 0;
+      position: relative;
+    }
+
+    .step-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 4px;
+    }
+
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+
+    .step-line {
+      width: 1px;
+      flex: 1;
+      background: var(--border);
+      margin: 8px 0;
+      min-height: 40px;
+    }
+
+    .step-content {
+      padding: 0 0 3rem 2rem;
+    }
+
+    .step-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+
+    /* Code block */
+    .code-block {
+      background: #060b14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .code-header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .code-lang {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .code-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-r { background: #ef4444; }
+    .dot-y { background: #f59e0b; }
+    .dot-g { background: #10b981; }
+
+    pre {
+      padding: 1.2rem 1.5rem;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.8;
+      color: #94a3b8;
+      overflow-x: auto;
+    }
+
+    pre .kw { color: #7c3aed; }
+    pre .str { color: #10b981; }
+    pre .cm { color: #475569; font-style: italic; }
+    pre .var { color: var(--accent); }
+    pre .val { color: #f59e0b; }
+
+    /* Result box */
+    .result-box {
+      background: rgba(16,185,129,0.05);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 6px;
+      padding: 1rem 1.5rem;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent3);
+      line-height: 1.8;
+    }
+
+    .result-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--accent3);
+      margin-bottom: 8px;
+      opacity: 0.7;
+    }
+
+    /* Architecture diagram */
+    .arch-diagram {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .arch-node {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem 2rem;
+      text-align: center;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .arch-node.primary { border-color: var(--accent); }
+    .arch-node.secondary { border-color: var(--accent2); }
+
+    .arch-node-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .arch-node-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .arch-node-sub {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .arch-node-ip {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .arch-node.secondary .arch-node-ip { color: #a78bfa; }
+
+    .arch-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .arch-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: rgba(0,212,255,0.1);
+      color: var(--accent);
+    }
+
+    .arch-tag.purple {
+      background: rgba(124,58,237,0.1);
+      color: #a78bfa;
+    }
+
+    .arch-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .arch-arrow-line {
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      position: relative;
+    }
+
+    .arch-arrow-line::after {
+      content: '▶';
+      position: absolute;
+      right: -6px;
+      top: -7px;
+      font-size: 10px;
+      color: var(--accent2);
+    }
+
+    /* Skills grid */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .skill-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .skill-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .skill-icon { font-size: 1.5rem; margin-bottom: 8px; }
+
+    .skill-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Issues section */
+    .issues-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+
+    .issue-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .issue-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(239,68,68,0.05);
+    }
+
+    .issue-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
+
+    .issue-title {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--danger);
+    }
+
+    .issue-body { padding: 16px; }
+
+    .issue-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .issue-text {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .fix-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--accent3);
+      margin-bottom: 4px;
+    }
+
+    .fix-text {
+      font-size: 13px;
+      color: var(--accent3);
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 3rem 8vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: gap;
+      gap: 1rem;
+    }
+
+    .footer-left {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .footer-left span { color: var(--accent); }
+
+    .footer-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .footer-links a {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--accent); }
+
+    /* Divider */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0 8vw;
+    }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes scrollLine {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .live-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent3);
+      animation: pulse 2s ease infinite;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">Home Lab Project — Part 02</div>
+  <h1>
+    Windows 10 Client
+    <span>& AD Integration</span>
+  </h1>
+  <p class="hero-desc">
+    Deploying a Windows 10 Pro client VM, joining it to an Active Directory domain, 
+    configuring Remote Desktop Protocol, and managing domain users and computers 
+    from a Windows Server 2022 Domain Controller.
+  </p>
+  <div class="badge-row">
+    <span class="badge badge-green"><span class="live-dot"></span>Complete</span>
+    <span class="badge badge-blue">Windows 10 Pro</span>
+    <span class="badge badge-blue">Active Directory</span>
+    <span class="badge badge-purple">RDP Enabled</span>
+    <span class="badge badge-amber">mylab.local</span>
+  </div>
+  <div class="scroll-hint">Scroll to explore</div>
+</section>
+
+<hr class="divider"/>
+
+<!-- ENVIRONMENT -->
+<section>
+  <div class="section-label">Lab Setup</div>
+  <h2 class="section-title">Environment Configuration</h2>
+  <div class="table-wrap">
+    <table class="env-table">
+      <tr><td>Hypervisor</td><td>Oracle VirtualBox</td></tr>
+      <tr><td>Domain Controller</td><td>WIN-6ARV79FMB48 — Windows Server 2022</td></tr>
+      <tr><td>Client Machine</td><td>CPC-NSimon-001 — Windows 10 Pro</td></tr>
+      <tr><td>Domain</td><td>mylab.local</td></tr>
+      <tr><td>Server IP</td><td>192.168.1.200</td></tr>
+      <tr><td>Client IP</td><td>192.168.1.10</td></tr>
+      <tr><td>Network Adapter</td><td>Bridged — RZ616 Wi-Fi 6E 160MHz</td></tr>
+      <tr><td>Client RAM</td><td>2048 MB</td></tr>
+      <tr><td>Client Storage</td><td>50 GB VDI</td></tr>
+    </table>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- OBJECTIVES -->
+<section>
+  <div class="section-label">Goals</div>
+  <h2 class="section-title">Project Objectives</h2>
+  <div class="checklist">
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Create Windows 10 Pro VM in VirtualBox</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Install VirtualBox Guest Additions</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Configure Bridged network adapter</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Set DNS to point to Domain Controller</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Join Windows 10 VM to AD domain</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Verify domain join via PowerShell</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Create domain user (nsimon@mylab.local)</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Enable and configure RDP on client</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">RDP using domain credentials</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Verify computer object in Active Directory</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">Rename client via PowerShell remotely</span></div>
+    <div class="check-item"><div class="check-icon">✓</div><span class="check-text">RDP using computer name (DNS resolution)</span></div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- STEPS -->
+<section>
+  <div class="section-label">Walkthrough</div>
+  <h2 class="section-title">Step-by-Step Implementation</h2>
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-left"><div class="step-num">01</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">DNS Configuration on Client</div>
+        <div class="step-desc">The Windows 10 VM was using the home router's DNS by default, which couldn't resolve mylab.local. Fixed by pointing DNS to the Domain Controller.</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">POWERSHELL — ADMIN</span><div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div></div>
+          <pre><span class="cm"># Set DNS to Domain Controller</span>
+<span class="var">Set-DnsClientServerAddress</span> -InterfaceAlias <span class="str">"Ethernet"</span> -ServerAddresses (<span class="str">"192.168.1.200"</span>)
+<span class="var">Clear-DnsClientCache</span>
+<span class="var">nslookup</span> mylab.local <span class="val">192.168.1.200</span></pre>
+        </div>
+        <div class="result-box">
+          <div class="result-label">✓ RESULT</div>
+          Server: winserver2022.homelab.local<br>
+          Address: 192.168.1.200<br>
+          Name: mylab.local → 192.168.1.200
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left"><div class="step-num">02</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Domain Join</div>
+        <div class="step-desc">Joined the Windows 10 Pro VM to the mylab.local Active Directory domain using PowerShell. The machine restarted automatically after joining.</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">POWERSHELL — ADMIN</span><div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div></div>
+          <pre><span class="var">Add-Computer</span> -DomainName <span class="str">"mylab.local"</span> -Credential mylab.local\Administrator -Restart
+
+<span class="cm"># Verify after restart</span>
+<span class="var">systeminfo</span> | findstr /B /C:<span class="str">"Domain"</span></pre>
+        </div>
+        <div class="result-box">
+          <div class="result-label">✓ RESULT</div>
+          Domain: mylab.local
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left"><div class="step-num">03</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Domain User Creation</div>
+        <div class="step-desc">Created a domain user account in Active Directory from the Domain Controller using PowerShell.</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">POWERSHELL — WINSERVER2022</span><div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div></div>
+          <pre><span class="var">New-ADUser</span> -Name <span class="str">"Neil Marvin Simon"</span> `
+  -GivenName <span class="str">"Neil Marvin"</span> `
+  -Surname <span class="str">"Simon"</span> `
+  -SamAccountName <span class="str">"nsimon"</span> `
+  -UserPrincipalName <span class="str">"nsimon@mylab.local"</span> `
+  -AccountPassword (ConvertTo-SecureString <span class="str">"Welcome123!"</span> -AsPlainText -Force) `
+  -Enabled <span class="val">$true</span> `
+  -Path <span class="str">"CN=Users,DC=mylab,DC=local"</span></pre>
+        </div>
+        <div class="result-box">
+          <div class="result-label">✓ USER CREATED</div>
+          Name: Neil Marvin Simon | Account: nsimon | UPN: nsimon@mylab.local | Enabled: True
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left"><div class="step-num">04</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">RDP Configuration</div>
+        <div class="step-desc">Enabled Remote Desktop on the Windows 10 client, configured Windows Firewall rules, and added the domain user to the Remote Desktop Users group.</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">POWERSHELL — WIN10 ADMIN</span><div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div></div>
+          <pre><span class="cm"># Enable RDP</span>
+<span class="var">Set-ItemProperty</span> -Path <span class="str">'HKLM:\System\CurrentControlSet\Control\Terminal Server'</span> `
+  -Name <span class="str">"fDenyTSConnections"</span> -Value <span class="val">0</span>
+
+<span class="cm"># Open Firewall</span>
+<span class="var">Enable-NetFirewallRule</span> -DisplayName <span class="str">"Remote Desktop*"</span>
+<span class="var">Set-NetFirewallRule</span> -DisplayName <span class="str">"Remote Desktop*"</span> -Profile Any -Enabled True
+
+<span class="cm"># Add domain user</span>
+<span class="var">Add-LocalGroupMember</span> -Group <span class="str">"Remote Desktop Users"</span> -Member <span class="str">"mylab\nsimon"</span>
+
+<span class="cm"># Enable ping</span>
+<span class="var">Enable-NetFirewallRule</span> -DisplayName <span class="str">"File and Printer Sharing (Echo Request - ICMPv4-In)"</span></pre>
+        </div>
+        <div class="result-box">
+          <div class="result-label">✓ RDP METHODS</div>
+          mstsc /v:192.168.1.10<br>
+          mstsc /v:CPC-NSimon-001<br>
+          mstsc /v:CPC-NSimon-001.mylab.local
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-left"><div class="step-num">05</div><div class="step-line"></div></div>
+      <div class="step-content">
+        <div class="step-title">Computer Rename via PowerShell</div>
+        <div class="step-desc">Renamed the Windows 10 client from the default name DESKTOP-750KQC6 to a professional naming convention CPC-NSimon-001. Active Directory synced automatically after restart.</div>
+        <div class="code-block">
+          <div class="code-header"><span class="code-lang">POWERSHELL — WIN10 ADMIN</span><div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div></div>
+          <pre><span class="var">Rename-Computer</span> -NewName <span class="str">"CPC-NSimon-001"</span> `
+  -DomainCredential mylab\Administrator -Restart
+
+<span class="cm"># Verify in AD from WinServer2022</span>
+<span class="var">Get-ADComputer</span> -Filter * | Select-Object Name, DNSHostName</pre>
+        </div>
+        <div class="result-box">
+          <div class="result-label">✓ COMPUTERS IN AD</div>
+          WIN-6ARV79FMB48 → WIN-6ARV79FMB48.mylab.local (DC)<br>
+          CPC-NSimon-001 → CPC-NSimon-001.mylab.local (Client)
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- ARCHITECTURE -->
+<section>
+  <div class="section-label">Infrastructure</div>
+  <h2 class="section-title">Lab Architecture</h2>
+  <div class="arch-diagram">
+    <div class="arch-node primary">
+      <div class="arch-node-icon">🖥️</div>
+      <div class="arch-node-title">WIN-6ARV79FMB48</div>
+      <div class="arch-node-sub">Windows Server 2022</div>
+      <div class="arch-node-ip">192.168.1.200</div>
+      <div class="arch-tags">
+        <span class="arch-tag">Domain Controller</span>
+        <span class="arch-tag">DNS Server</span>
+        <span class="arch-tag">DHCP Server</span>
+        <span class="arch-tag">AD DS</span>
+      </div>
+    </div>
+    <div class="arch-arrow">
+      <div class="arch-arrow-line"></div>
+      <span>RDP / Ping / AD</span>
+    </div>
+    <div class="arch-node secondary">
+      <div class="arch-node-icon">💻</div>
+      <div class="arch-node-title">CPC-NSimon-001</div>
+      <div class="arch-node-sub">Windows 10 Pro</div>
+      <div class="arch-node-ip">192.168.1.10</div>
+      <div class="arch-tags">
+        <span class="arch-tag purple">Domain Joined</span>
+        <span class="arch-tag purple">RDP Enabled</span>
+        <span class="arch-tag purple">nsimon</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- ISSUES -->
+<section>
+  <div class="section-label">Troubleshooting</div>
+  <h2 class="section-title">Issues Encountered & Fixes</h2>
+  <div class="issues-grid">
+    <div class="issue-card">
+      <div class="issue-header"><div class="issue-dot"></div><span class="issue-title">DNS_PROBE — mylab.local not found</span></div>
+      <div class="issue-body">
+        <div class="issue-label">CAUSE</div>
+        <div class="issue-text">Client was using home router DNS (IPv6) instead of the Domain Controller's DNS server.</div>
+        <div class="fix-label">✓ FIX</div>
+        <div class="fix-text">Manually set DNS to 192.168.1.200 using Set-DnsClientServerAddress and flushed cache.</div>
+      </div>
+    </div>
+    <div class="issue-card">
+      <div class="issue-header"><div class="issue-dot"></div><span class="issue-title">Domain Join — Access Denied</span></div>
+      <div class="issue-body">
+        <div class="issue-label">CAUSE</div>
+        <div class="issue-text">Wrong credential format used (mylab\ instead of mylab.local\) and DNS not yet configured.</div>
+        <div class="fix-label">✓ FIX</div>
+        <div class="fix-text">Fixed DNS first, then used full domain format mylab.local\Administrator with correct password.</div>
+      </div>
+    </div>
+    <div class="issue-card">
+      <div class="issue-header"><div class="issue-dot"></div><span class="issue-title">Ping Timeout from Server to Client</span></div>
+      <div class="issue-body">
+        <div class="issue-label">CAUSE</div>
+        <div class="issue-text">Windows 10 Firewall blocks ICMP (ping) requests by default.</div>
+        <div class="fix-label">✓ FIX</div>
+        <div class="fix-text">Enabled the ICMPv4 Echo Request rule via Enable-NetFirewallRule.</div>
+      </div>
+    </div>
+    <div class="issue-card">
+      <div class="issue-header"><div class="issue-dot"></div><span class="issue-title">Remote Rename — RPC Unavailable</span></div>
+      <div class="issue-body">
+        <div class="issue-label">CAUSE</div>
+        <div class="issue-text">WinRM not configured on the client, blocking remote PowerShell commands from the server.</div>
+        <div class="fix-label">✓ FIX</div>
+        <div class="fix-text">Ran the Rename-Computer command directly on the Windows 10 VM instead of remotely.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- SKILLS -->
+<section>
+  <div class="section-label">Takeaways</div>
+  <h2 class="section-title">Skills Demonstrated</h2>
+  <div class="skills-grid">
+    <div class="skill-card"><div class="skill-icon">🖥️</div><div class="skill-name">Windows 10 Pro Deployment</div></div>
+    <div class="skill-card"><div class="skill-icon">🔗</div><div class="skill-name">Active Directory Domain Join</div></div>
+    <div class="skill-card"><div class="skill-icon">💻</div><div class="skill-name">PowerShell Administration</div></div>
+    <div class="skill-card"><div class="skill-icon">🌐</div><div class="skill-name">DNS Client Configuration</div></div>
+    <div class="skill-card"><div class="skill-icon">🖱️</div><div class="skill-name">RDP Setup & Management</div></div>
+    <div class="skill-card"><div class="skill-icon">👤</div><div class="skill-name">AD User Account Creation</div></div>
+    <div class="skill-card"><div class="skill-icon">🏷️</div><div class="skill-name">Computer Object Management</div></div>
+    <div class="skill-card"><div class="skill-icon">🔥</div><div class="skill-name">Windows Firewall Config</div></div>
+    <div class="skill-card"><div class="skill-icon">🔍</div><div class="skill-name">Network Troubleshooting</div></div>
+    <div class="skill-card"><div class="skill-icon">📋</div><div class="skill-name">IT Documentation</div></div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">
+    Home Lab Project — Part 02 &nbsp;|&nbsp; <span>mylab.local</span> &nbsp;|&nbsp; Built by Neil Marvin Simon
+  </div>
+  <div class="footer-links">
+    <a href="index.html">Part 01 — DNS & DHCP</a>
+    <a href="#">Part 03 — GPO (Coming Soon)</a>
+  </div>
+</footer>
+
+</body>
+</html>
